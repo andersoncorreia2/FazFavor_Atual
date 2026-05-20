@@ -18,17 +18,11 @@ import com.example.fazfavor_atual.ui.theme.*
 
 @Composable
 fun DetalhesScreen(caronaInfo: Carona?, aoConfirmarCarona: () -> Unit, aoClicarVoltar: () -> Unit) {
-
-    if (caronaInfo == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Erro ao carregar detalhes!")
-        }
-        return
-    }
-
     Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(24.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            IconButton(onClick = { aoClicarVoltar() }, modifier = Modifier.size(48.dp)) {
+
+        // 🔙 SETA DE VOLTAR CONSERTADA
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = aoClicarVoltar, modifier = Modifier.size(48.dp)) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = AzulPrincipal)
             }
             Text("Detalhes da Carona", color = AzulPrincipal, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -36,43 +30,76 @@ fun DetalhesScreen(caronaInfo: Carona?, aoConfirmarCarona: () -> Unit, aoClicarV
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        ItemDetalhe(Icons.Default.LocationOn, AzulPrincipal, "Origem", caronaInfo.origem)
-        ItemDetalhe(Icons.Default.LocationOn, VerdeBotao, "Destino", caronaInfo.destino)
-        ItemDetalhe(Icons.Default.Info, Color.Gray, "Horário", caronaInfo.horario)
-        ItemDetalhe(Icons.Default.Person, Color.Gray, "Vagas disponíveis", "${caronaInfo.vagas} vagas")
-        ItemDetalhe(Icons.Default.AccountCircle, Color.Gray, "Motorista", caronaInfo.motorista)
+        if (caronaInfo != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = AzulPrincipal)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Origem", fontSize = 12.sp, color = Color.Gray)
+                    Text(caronaInfo.origem, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.padding(vertical = 8.dp)) {
-            Text("$", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.width(32.dp))
-            Column {
-                Text("Valor", color = Color.Gray, fontSize = 12.sp)
-                Text("Gratuito", color = VerdeBotao, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, tint = VerdeBotao)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Destino", fontSize = 12.sp, color = Color.Gray)
+                    Text(caronaInfo.destino, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Horário", fontSize = 12.sp, color = Color.Gray)
+                    Text(caronaInfo.horario, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Vagas disponíveis", fontSize = 12.sp, color = Color.Gray)
+                    Text("${caronaInfo.vagas} vagas", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.AccountCircle, contentDescription = null, tint = Color.Gray)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Motorista", fontSize = 12.sp, color = Color.Gray)
+                    Text(caronaInfo.motorista, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("$", fontSize = 24.sp, color = Color.Gray, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Valor", fontSize = 12.sp, color = Color.Gray)
+                    Text("Gratuito", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = VerdeBotao)
+                }
             }
         }
-
-        ItemDetalhe(Icons.Default.Info, Color.Gray, "Informações Adicionais", "Saindo após o culto. Ser pontual.")
 
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
             onClick = aoConfirmarCarona,
-            colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            shape = RoundedCornerShape(8.dp)
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao)
         ) {
-            Text("Solicitar Carona", fontSize = 16.sp)
-        }
-    }
-}
-
-@Composable
-fun ItemDetalhe(icone: androidx.compose.ui.graphics.vector.ImageVector, corIcone: Color, titulo: String, valor: String) {
-    Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
-        Icon(icone, contentDescription = null, tint = corIcone, modifier = Modifier.width(32.dp))
-        Column {
-            Text(titulo, color = Color.Gray, fontSize = 12.sp)
-            Text(valor, fontSize = 14.sp)
+            Text("Solicitar Carona", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

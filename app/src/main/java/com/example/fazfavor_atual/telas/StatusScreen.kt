@@ -6,11 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,74 +18,138 @@ import com.example.fazfavor_atual.BancoDeDados
 import com.example.fazfavor_atual.ui.theme.*
 
 @Composable
-fun MinhasSolicitacoesScreen(aoClicarPerfil: () -> Unit, aoClicarVoltar: () -> Unit) {
+fun MinhasSolicitacoesScreen(
+    isMotorista: Boolean,
+    nomeMotoristaLogado: String,
+    aoClicarPerfil: () -> Unit,
+    aoClicarVoltar: () -> Unit,
+    aoClicarNovoEvento: () -> Unit
+) {
+    val minhasCaronas = BancoDeDados.caronas.filter { it.motorista == nomeMotoristaLogado }
+
     Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(16.dp)) {
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = aoClicarVoltar, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = AzulPrincipal)
-            }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Minhas Solicitações", color = AzulPrincipal, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            OutlinedButton(
+                onClick = aoClicarVoltar, shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp), modifier = Modifier.height(36.dp)
+            ) { Text("🚪 Sair", color = VermelhoErro, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // --- A MÁGICA ACONTECE AQUI! ---
-        if (BancoDeDados.minhasSolicitacoes.isEmpty()) {
-            // Se o usuário não pediu nenhuma carona ainda, avisa na tela!
+        if (isMotorista) {
+            Button(
+                onClick = aoClicarNovoEvento, colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao),
+                modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(8.dp)
+            ) { Text("➕ Criar Novo Evento/Carona", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        if (minhasCaronas.isEmpty()) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("Você ainda não pediu nenhuma carona.", color = Color.Gray)
+                Text("Nenhum evento criado por você no momento.", color = Color.Gray)
             }
         } else {
-            // Se ele pediu, mostra a lista exata do que foi solicitado!
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(BancoDeDados.minhasSolicitacoes) { pedido ->
-                    // Se estiver pendente fica amarelo, se não, verde!
-                    val corEtiqueta = if (pedido.status == "Pendente") AmareloAviso else VerdeBotao
+                items(minhasCaronas) { carona ->
+                    val nomeDoPassageiro = BancoDeDados.nomesPassageiros[carona.id]
+                    val statusAtual = BancoDeDados.statusDasCaronas[carona.id] ?: if (nomeDoPassageiro != null) "Pendente" else "Livre"
+
+                    val cor = when(statusAtual) {
+                        "Aceito" -> VerdeBotao
+                        "Recusado" -> Color(0xFFD32F2F)
+                        "Pendente" -> AmareloAviso
+                        else -> Color.Transparent
+                    }
 
                     CartaoStatus(
-                        destino = pedido.carona.destino,
-                        motorista = pedido.carona.motorista,
-                        horario = pedido.carona.horario,
-                        status = pedido.status,
-                        corStatus = corEtiqueta
+                        idSolicitacao = carona.id, origemCrua = carona.origem, destino = carona.destino,
+                        passageiro = nomeDoPassageiro, vagas = carona.vagas,
+                        statusMemoria = statusAtual, corStatus = cor, isMotorista = isMotorista
                     )
                 }
             }
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-
         Button(
-            onClick = aoClicarPerfil,
-            colors = ButtonDefaults.buttonColors(containerColor = AzulPrincipal),
+            onClick = aoClicarPerfil, colors = ButtonDefaults.buttonColors(containerColor = AzulPrincipal),
             modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Ver Meu Perfil")
-        }
+        ) { Text("Ver Meu Perfil") }
     }
 }
 
-// O Cartão Inteligente
 @Composable
-fun CartaoStatus(destino: String, motorista: String, horario: String, status: String, corStatus: Color) {
+fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passageiro: String?, vagas: String, statusMemoria: String, corStatus: Color, isMotorista: Boolean) {
+
+    val partes = origemCrua.split(" - ", limit = 2)
+    val eventoNome = if (partes.size > 1) partes[0] else "Evento"
+    val origemReal = if (partes.size > 1) partes[1] else origemCrua
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Row(modifier = Modifier.weight(1f)) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = AzulPrincipal, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(destino, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    // Agora mostra o Motorista e o Horário reais!
-                    Text("Motorista: $motorista", fontSize = 12.sp, color = Color.Gray)
-                    Text("Horário: $horario", fontSize = 12.sp, color = Color.Gray)
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Evento: $eventoNome", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AzulPrincipal)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Origem/Saída: $origemReal", fontSize = 14.sp, color = Color.DarkGray)
+                    Text("Destino: $destino", fontSize = 14.sp, color = Color.DarkGray)
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    if (isMotorista) {
+                        if (passageiro != null) {
+                            Text("Passageiro: $passageiro", fontSize = 14.sp, color = AzulPrincipal, fontWeight = FontWeight.Bold)
+                        } else {
+                            Text("Aguardando passageiros...", fontSize = 12.sp, color = Color.Gray)
+                        }
+                    }
+                    Text("Vagas: $vagas", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if(vagas == "0") VermelhoErro else VerdeBotao)
+                }
+
+                if (statusMemoria != "Livre" && statusMemoria != "Transparente") {
+                    // Garantir visibilidade das cores
+                    val textColor = if (statusMemoria == "Pendente") Color.Black else corStatus
+
+                    Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
+                        Text(statusMemoria, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+                    }
                 }
             }
-            Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                Text(status, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (isMotorista) {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                    if (statusMemoria == "Pendente" && passageiro != null) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Aceito")
+                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Aceito"
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), modifier = Modifier.weight(1f).height(36.dp), shape = RoundedCornerShape(8.dp)
+                            ) { Text("Aceitar", fontSize = 12.sp, color = Color.White) }
+
+                            Button(
+                                onClick = {
+                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Recusado")
+                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Recusado"
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)), modifier = Modifier.weight(1f).height(36.dp), shape = RoundedCornerShape(8.dp)
+                            ) { Text("Recusar", fontSize = 12.sp, color = Color.White) }
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { BancoDeDados.excluirCaronaDoServidor(idSolicitacao) },
+                        modifier = Modifier.fillMaxWidth().height(36.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = VermelhoErro)
+                    ) { Text("🗑️ Excluir Evento", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+                }
             }
         }
     }

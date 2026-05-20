@@ -1,70 +1,98 @@
 package com.example.fazfavor_atual.telas
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fazfavor_atual.ui.theme.*
 
 @Composable
-fun LoginScreen(aoClicarEntrar: (String, String) -> Unit, aoClicarCriarConta: () -> Unit, mensagemErro: String = "") {
+fun LoginScreen(
+    aoFazerLogin: (String, String) -> Unit,
+    aoClicarCriarConta: () -> Unit,
+    mensagemErro: String = ""
+) {
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
 
-    // O mestre do Tab!
-    val focusManager = LocalFocusManager.current
+    // VARIÁVEL QUE CONTROLA O OLHINHO DA SENHA
+    var senhaVisivel by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("FazFavor", fontSize = 32.sp, color = AzulPrincipal, fontWeight = FontWeight.Bold)
-        Text("Caronas solidárias", fontSize = 16.sp, color = Color.Gray)
-        Spacer(modifier = Modifier.height(48.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // TÍTULO DO APP
+        Text(
+            text = "FazFavor",
+            fontSize = 32.sp,
+            color = AzulPrincipal,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Caronas solidárias",
+            fontSize = 16.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
 
+        // MENSAGEM DE ERRO OU CARREGAMENTO
+        if (mensagemErro.isNotEmpty()) {
+            val corAlerta = if (mensagemErro.contains("Conectando")) AzulPrincipal else VermelhoErro
+            Text(
+                text = mensagemErro,
+                color = corAlerta,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(bottom = 16.dp),
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // CAMPO DE EMAIL
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
-        Spacer(modifier = Modifier.height(16.dp))
 
+        // CAMPO DE SENHA COM O BOTÃO DE OLHINHO
         OutlinedTextField(
             value = senha,
             onValueChange = { senha = it },
             label = { Text("Senha") },
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                focusManager.clearFocus()
-                aoClicarEntrar(email, senha)
-            })
+            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            trailingIcon = {
+                val image = if (senhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                val description = if (senhaVisivel) "Ocultar senha" else "Mostrar senha"
+
+                IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
+                    Icon(imageVector = image, contentDescription = description)
+                }
+            }
         )
 
-        if (mensagemErro.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(mensagemErro, color = VermelhoErro, fontSize = 14.sp)
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // --- NOSSOS BOTÕES GRANDES E BONITOS VOLTARAM! ---
-
-        // Botão Principal Verde
+        // BOTÃO ENTRAR
         Button(
-            onClick = { aoClicarEntrar(email, senha) },
+            onClick = { aoFazerLogin(email, senha) },
             colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao),
             modifier = Modifier.fillMaxWidth().height(48.dp)
         ) {
@@ -73,7 +101,7 @@ fun LoginScreen(aoClicarEntrar: (String, String) -> Unit, aoClicarCriarConta: ()
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botão Secundário (Branco com borda azul)
+        // BOTÃO CRIAR CONTA
         OutlinedButton(
             onClick = aoClicarCriarConta,
             modifier = Modifier.fillMaxWidth().height(48.dp)
