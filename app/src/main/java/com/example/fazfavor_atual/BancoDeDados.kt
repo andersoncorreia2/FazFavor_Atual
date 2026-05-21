@@ -19,6 +19,10 @@ object BancoDeDados {
     var nomesPassageiros = mutableStateMapOf<Int, String>()
     var statusDasCaronas = mutableStateMapOf<Int, String>()
     var meusPedidos = mutableStateMapOf<Int, String>()
+
+    // 🚨 O TRADUTOR SECRETO: Mapeia a Carona com a Solicitação real do servidor
+    var idsDasSolicitacoes = mutableStateMapOf<Int, Int>()
+
     var temEventoAtivo: Boolean = false
 
     fun buscarCaronasDoServidor() {
@@ -42,7 +46,6 @@ object BancoDeDados {
                     )
                     caronas.add(caronaDoCofre)
                 }
-                println("✨ TELA ATUALIZADA COM SUCESSO A PARTIR DO COFRE NUVEM!")
             } catch (erro: Exception) {
                 println("❌ ERRO NA VIAGEM DE BUSCA NUVEM: ${erro.message}")
             }
@@ -72,7 +75,6 @@ object BancoDeDados {
                 escritor.write(pacoteJson)
                 escritor.flush()
 
-                println("📦 PACOTE ENVIADO PARA NUVEM! Servidor respondeu: ${conexao.responseCode}")
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO NA ENTREGA DA CARONA NUVEM: ${erro.message}")
@@ -100,7 +102,6 @@ object BancoDeDados {
                 escritor.write(pacoteJson)
                 escritor.flush()
 
-                println("🙋‍♂️ PEDIDO ENVIADO NUVEM! O Servidor respondeu: ${conexao.responseCode}")
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO NO PEDIDO NUVEM: ${erro.message}")
@@ -108,10 +109,20 @@ object BancoDeDados {
         }
     }
 
-    fun responderPedidoMotorista(solicitacaoId: Int, statusDecidido: String) {
+    // 🛠️ FUNÇÃO CONSERTADA: Agora ela traduz o ID antes de enviar para a nuvem
+    fun responderPedidoMotorista(caronaIdDaTela: Int, statusDecidido: String) {
+        // Pega o ID verdadeiro do pedido lá no tradutor secreto
+        val solicitacaoIdReal = idsDasSolicitacoes[caronaIdDaTela]
+
+        if (solicitacaoIdReal == null) {
+            println("❌ ERRO: O aplicativo não encontrou a ID real da solicitação no servidor!")
+            return
+        }
+
         thread {
             try {
-                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/solicitacoes/$solicitacaoId")
+                // Envia para o endereço exato que o servidor espera
+                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/solicitacoes/$solicitacaoIdReal")
                 val conexao = enderecoMagico.openConnection() as HttpURLConnection
                 conexao.requestMethod = "PUT"
                 conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -127,7 +138,6 @@ object BancoDeDados {
                 escritor.write(pacoteJson)
                 escritor.flush()
 
-                println("PROCESSO ATUALIZADO PARA '$statusDecidido' NA NUVEM! Servidor respondeu: ${conexao.responseCode}")
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO AO RESPONDER NA NUVEM: ${erro.message}")
@@ -138,14 +148,12 @@ object BancoDeDados {
     fun excluirCaronaDoServidor(caronaId: Int) {
         caronas.removeAll { it.id == caronaId }
         temEventoAtivo = false
-        println("✨ EVENTO REMOVIDO DA TELA COM SUCESSO!")
 
         thread {
             try {
                 val enderecoMagico = URL("https://fazfavor-backend.onrender.com/caronas/$caronaId")
                 val conexao = enderecoMagico.openConnection() as HttpURLConnection
                 conexao.requestMethod = "DELETE"
-                println("🗑️ ORDEM DE CANCELAMENTO ENVIADA NUVEM! Servidor respondeu: ${conexao.responseCode}")
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO AO AVISAR O SERVIDOR NUVEM: ${erro.message}")
@@ -154,7 +162,6 @@ object BancoDeDados {
     }
 
     fun fazerSolicitacao(carona: Carona, nomePassageiro: String) {
-        println("🚗 Enviando solicitação oficial para o banco... ID: ${carona.id}")
         statusDasCaronas[carona.id] = "Pendente"
         nomesPassageiros[carona.id] = nomePassageiro
         meusPedidos[carona.id] = "Pendente"
@@ -192,7 +199,7 @@ object BancoDeDados {
                         placa = jsonResponse.optString("placa", ""),
                         senha = senhaRecebida
                     )
-                    aoTerminar(usuario, "") // Sucesso!
+                    aoTerminar(usuario, "")
                 } else {
                     aoTerminar(null, "Acesso Negado: E-mail ou senha incorretos.")
                 }
@@ -208,8 +215,8 @@ object BancoDeDados {
                 val url = URL("https://fazfavor-backend.onrender.com/usuarios")
                 val conexao = url.openConnection() as HttpURLConnection
                 conexao.requestMethod = "POST"
-                conexao.connectTimeout = 15000 // Aguarda 15s para achar a internet
-                conexao.readTimeout = 60000    // Aguarda 60s o Render "acordar"
+                conexao.connectTimeout = 15000
+                conexao.readTimeout = 60000
                 conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
 
                 val json = """
@@ -229,8 +236,8 @@ object BancoDeDados {
                 escritor.flush()
 
                 when (conexao.responseCode) {
-                    201 -> aoTerminar(true, "") // Sucesso
-                    400 -> aoTerminar(false, "Este CPF ou E-mail já possui cadastro!") // Barrado pelo servidor
+                    201 -> aoTerminar(true, "")
+                    400 -> aoTerminar(false, "Este CPF ou E-mail já possui cadastro!")
                     else -> aoTerminar(false, "Erro desconhecido ao cadastrar.")
                 }
             } catch (erro: Exception) {
@@ -239,7 +246,6 @@ object BancoDeDados {
         }
     }
 
-    // 🕵️ NOVO: O ESPIÃO DE CPF EM TEMPO REAL
     fun verificarCpfExistente(cpfParaChecar: String, aoDescobrir: (Boolean) -> Unit) {
         thread {
             try {
@@ -251,7 +257,7 @@ object BancoDeDados {
                     val resposta = conexao.inputStream.bufferedReader().readText()
                     val jsonResponse = JSONObject(resposta)
                     val cpfJaExiste = jsonResponse.getBoolean("existe")
-                    aoDescobrir(cpfJaExiste) // Avisa a tela de Cadastro se existe ou não
+                    aoDescobrir(cpfJaExiste)
                 }
             } catch (erro: Exception) {
                 println("❌ Erro ao checar CPF na nuvem: ${erro.message}")
@@ -275,15 +281,17 @@ object BancoDeDados {
 
             for (i in 0 until jsonArray.length()) {
                 val item = jsonArray.getJSONObject(i)
-                val idSolicitacao = item.getInt("id")
-                val caronaId = item.getInt("carona_id")
+                val idSolicitacao = item.getInt("id") // Esse é o ID real do pedido
+                val caronaId = item.getInt("carona_id") // Esse é o ID da carona
                 val passageiro = item.getString("passageiro")
                 val status = item.getString("status")
 
-                // Atualiza as listas do aplicativo com os dados que vieram da nuvem
                 nomesPassageiros[caronaId] = passageiro
                 statusDasCaronas[caronaId] = status
                 meusPedidos[caronaId] = status
+
+                // 🕵️ SALVA O ID REAL DA SOLICITAÇÃO ESCONDIDO NO TRADUTOR
+                idsDasSolicitacoes[caronaId] = idSolicitacao
             }
         } catch (erro: Exception) {
             println("❌ O Radar falhou em buscar solicitações: ${erro.message}")
@@ -293,7 +301,6 @@ object BancoDeDados {
     fun ligarRadar() {
         thread {
             while (true) {
-                // A cada 5 segundos, o app busca caronas e pedidos novos!
                 buscarCaronasDoServidor()
                 buscarSolicitacoesDoServidor()
                 Thread.sleep(5000)
