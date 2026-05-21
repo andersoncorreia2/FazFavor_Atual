@@ -154,6 +154,11 @@ object BancoDeDados {
                 val enderecoMagico = URL("https://fazfavor-backend.onrender.com/caronas/$caronaId")
                 val conexao = enderecoMagico.openConnection() as HttpURLConnection
                 conexao.requestMethod = "DELETE"
+
+                // 🔥 O GATILHO: Essa linha é obrigatória. Sem ela, o Android não envia a ordem para a nuvem!
+                val codigoResposta = conexao.responseCode
+                println("🗑️ Evento excluído! Servidor respondeu: $codigoResposta")
+
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO AO AVISAR O SERVIDOR NUVEM: ${erro.message}")
