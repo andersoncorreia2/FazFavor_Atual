@@ -280,8 +280,20 @@ object BancoDeDados {
         }
     }
 
+    // 🗑️ GATILHO OFICIAL PARA EXCLUIR CONTA NA NUVEM
     fun excluirUsuario(emailParaExcluir: String) {
-        println("🗑️ Pedido de exclusão feito para: $emailParaExcluir")
+        thread {
+            try {
+                val url = URL("https://fazfavor-backend.onrender.com/usuarios/$emailParaExcluir")
+                val conexao = url.openConnection() as HttpURLConnection
+                conexao.requestMethod = "DELETE"
+
+                val codigoResposta = conexao.responseCode
+                println("🗑️ Conta excluída! Servidor respondeu: $codigoResposta")
+            } catch (erro: Exception) {
+                println("❌ ERRO AO EXCLUIR CONTA NUVEM: ${erro.message}")
+            }
+        }
     }
 
     // ==========================================

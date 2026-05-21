@@ -139,7 +139,6 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = {
-                                    // 🚀 TEXTO PURO PRO SERVIDOR NÃO ENGASGAR
                                     BancoDeDados.responderPedidoMotorista(idSolicitacao, "Aceito")
                                     BancoDeDados.statusDasCaronas[idSolicitacao] = "Aceito"
                                 },
@@ -148,7 +147,6 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
 
                             Button(
                                 onClick = {
-                                    // 🚀 TEXTO PURO PRO SERVIDOR
                                     BancoDeDados.responderPedidoMotorista(idSolicitacao, "Recusado")
                                     BancoDeDados.statusDasCaronas[idSolicitacao] = "Recusado"
                                 },
@@ -161,6 +159,21 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
                         onClick = { BancoDeDados.excluirCaronaDoServidor(idSolicitacao) },
                         modifier = Modifier.fillMaxWidth().height(36.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = VermelhoErro)
                     ) { Text("🗑️ Excluir Evento", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+
+                    // ↩️ NOVO BOTÃO: Desfazer ação (Só aparece se já foi aceito ou recusado)
+                    if (!statusMemoria.lowercase().contains("pendente") && passageiro != null) {
+                        Button(
+                            onClick = {
+                                BancoDeDados.responderPedidoMotorista(idSolicitacao, "Pendente")
+                                BancoDeDados.statusDasCaronas[idSolicitacao] = "Pendente"
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AmareloAviso),
+                            modifier = Modifier.fillMaxWidth().height(36.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("↩️ Desfazer Decisão (Voltar p/ Pendente)", fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }

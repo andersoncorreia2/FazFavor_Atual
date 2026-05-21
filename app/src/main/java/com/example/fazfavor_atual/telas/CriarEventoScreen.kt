@@ -11,8 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fazfavor_atual.ui.theme.*
@@ -24,6 +28,29 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
     var destino by remember { mutableStateOf("") }
     var horario by remember { mutableStateOf("") }
     var vagas by remember { mutableStateOf("") }
+
+    // ⏰ NOVA MÁSCARA VISUAL BLINDADA
+    val mascaraHorario = VisualTransformation { text ->
+        val num = text.text.take(4)
+        var formatado = ""
+        for (i in num.indices) {
+            formatado += num[i]
+            if (i == 1 && num.length > 2) formatado += ":"
+        }
+        val mapeamento = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                if (offset <= 1) return offset
+                if (offset <= 4) return offset + 1
+                return 5
+            }
+            override fun transformedToOriginal(offset: Int): Int {
+                if (offset <= 2) return offset
+                if (offset <= 5) return offset - 1
+                return 4
+            }
+        }
+        TransformedText(AnnotatedString(formatado), mapeamento)
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(24.dp)) {
 
@@ -46,25 +73,22 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // ⏰ CAMPO DE HORÁRIO BLINDADO (Não trava mais)
+            // ⏰ CAMPO DE HORÁRIO ATUALIZADO COM A MÁSCARA
             OutlinedTextField(
                 value = horario,
                 onValueChange = { novoValor ->
                     val apenasNumeros = novoValor.filter { it.isDigit() }
                     if (apenasNumeros.length <= 4) {
-                        horario = if (apenasNumeros.length >= 3) {
-                            "${apenasNumeros.substring(0, 2)}:${apenasNumeros.substring(2)}"
-                        } else {
-                            apenasNumeros
-                        }
+                        horario = apenasNumeros // Salva só os números, a máscara cuida dos ":"
                     }
                 },
                 label = { Text("Horário") },
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                visualTransformation = mascaraHorario // Aplica a mágica aqui
             )
 
-            // 🔢 CAMPO DE VAGAS (Apenas números)
+            // 🔢 CAMPO DE VAGAS
             OutlinedTextField(
                 value = vagas,
                 onValueChange = { novoValor ->
@@ -80,7 +104,11 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = { aoPublicarEvento(nomeEvento, origem, destino, horario, vagas) },
+            onClick = {
+                // Antes de publicar, formata o horário certinho (com os ":") se o usuário digitou os 4 números
+                val horarioFinal = if (horario.length == 4) "${horario.substring(0, 2)}:${horario.substring(2)}" else horario
+                aoPublicarEvento(nomeEvento, origem, destino, horarioFinal, vagas)
+            },
             colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao),
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(8.dp)
