@@ -75,6 +75,10 @@ object BancoDeDados {
                 escritor.write(pacoteJson)
                 escritor.flush()
 
+                // 🔥 O GATILHO
+                val codigoResposta = conexao.responseCode
+                println("📦 EVENTO CRIADO NA NUVEM! Servidor respondeu: $codigoResposta")
+
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO NA ENTREGA DA CARONA NUVEM: ${erro.message}")
@@ -102,6 +106,10 @@ object BancoDeDados {
                 escritor.write(pacoteJson)
                 escritor.flush()
 
+                // 🔥 O GATILHO
+                val codigoResposta = conexao.responseCode
+                println("🙋‍♂️ PEDIDO ENVIADO! Servidor respondeu: $codigoResposta")
+
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
                 println("❌ ERRO NO PEDIDO NUVEM: ${erro.message}")
@@ -109,7 +117,6 @@ object BancoDeDados {
         }
     }
 
-    // 🛠️ FUNÇÃO CONSERTADA: Agora ela traduz o ID antes de enviar para a nuvem
     fun responderPedidoMotorista(caronaIdDaTela: Int, statusDecidido: String) {
         // Pega o ID verdadeiro do pedido lá no tradutor secreto
         val solicitacaoIdReal = idsDasSolicitacoes[caronaIdDaTela]
@@ -121,7 +128,6 @@ object BancoDeDados {
 
         thread {
             try {
-                // Envia para o endereço exato que o servidor espera
                 val enderecoMagico = URL("https://fazfavor-backend.onrender.com/solicitacoes/$solicitacaoIdReal")
                 val conexao = enderecoMagico.openConnection() as HttpURLConnection
                 conexao.requestMethod = "PUT"
@@ -137,6 +143,10 @@ object BancoDeDados {
                 val escritor = OutputStreamWriter(conexao.outputStream)
                 escritor.write(pacoteJson)
                 escritor.flush()
+
+                // 🔥 O GATILHO
+                val codigoResposta = conexao.responseCode
+                println("🔄 STATUS ATUALIZADO NA NUVEM! Servidor respondeu: $codigoResposta")
 
                 buscarCaronasDoServidor()
             } catch (erro: Exception) {
@@ -155,7 +165,7 @@ object BancoDeDados {
                 val conexao = enderecoMagico.openConnection() as HttpURLConnection
                 conexao.requestMethod = "DELETE"
 
-                // 🔥 O GATILHO: Essa linha é obrigatória. Sem ela, o Android não envia a ordem para a nuvem!
+                // 🔥 O GATILHO
                 val codigoResposta = conexao.responseCode
                 println("🗑️ Evento excluído! Servidor respondeu: $codigoResposta")
 
@@ -174,7 +184,7 @@ object BancoDeDados {
     }
 
     // ==========================================
-    // 🌐 NOVAS FUNÇÕES DE AUTENTICAÇÃO NA NUVEM
+    // 🌐 FUNÇÕES DE AUTENTICAÇÃO NA NUVEM
     // ==========================================
 
     fun fazerLoginNuvem(emailRecebido: String, senhaRecebida: String, aoTerminar: (Usuario?, String) -> Unit) {
@@ -286,8 +296,8 @@ object BancoDeDados {
 
             for (i in 0 until jsonArray.length()) {
                 val item = jsonArray.getJSONObject(i)
-                val idSolicitacao = item.getInt("id") // Esse é o ID real do pedido
-                val caronaId = item.getInt("carona_id") // Esse é o ID da carona
+                val idSolicitacao = item.getInt("id")
+                val caronaId = item.getInt("carona_id")
                 val passageiro = item.getString("passageiro")
                 val status = item.getString("status")
 
