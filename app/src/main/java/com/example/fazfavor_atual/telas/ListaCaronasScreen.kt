@@ -91,7 +91,6 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
 
                 val statusLimpo = statusDaCarona.trim().lowercase()
 
-                // 🛡️ BLINDAGEM SUPREMA: Procura a palavra no meio do texto, ignorando emojis!
                 val corStatus = when {
                     statusLimpo.contains("aceito") -> VerdeBotao
                     statusLimpo.contains("recusado") -> VermelhoErro
@@ -99,10 +98,16 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
                     else -> AmareloAviso
                 }
 
-                val textoParaExibir = statusDaCarona.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                // 🎨 MAGIA VISUAL: Embeleza com Emojis o texto recebido do servidor
+                val textoComEmoji = when {
+                    statusLimpo.contains("aceito") -> "Aceito ✅"
+                    statusLimpo.contains("recusado") -> "Recusado ❌"
+                    statusLimpo.contains("pendente") -> "Pendente ⏳"
+                    else -> statusDaCarona
+                }
 
                 Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                    Text(textoParaExibir, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                    Text(textoComEmoji, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
                 }
             } else {
                 if ((carona.vagas.toIntOrNull() ?: 0) > 0) {

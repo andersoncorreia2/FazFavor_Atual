@@ -60,7 +60,6 @@ fun MinhasSolicitacoesScreen(
                     val statusFormatado = statusAtual.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
                     val statusLimpo = statusAtual.trim().lowercase()
 
-                    // 🛡️ BLINDAGEM SUPREMA AQUI TAMBÉM
                     val cor = when {
                         statusLimpo.contains("aceito") -> VerdeBotao
                         statusLimpo.contains("recusado") -> Color(0xFFD32F2F)
@@ -115,11 +114,18 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
                 }
 
                 if (statusMemoria != "Livre" && statusMemoria != "Transparente") {
-
                     val textColor = if (statusMemoria.lowercase().contains("pendente")) Color.Black else corStatus
 
+                    // 🎨 MAGIA VISUAL: Coloca os emojis na TELA sem mandar pro banco de dados
+                    val textoComEmoji = when {
+                        statusMemoria.lowercase().contains("aceito") -> "Aceito ✅"
+                        statusMemoria.lowercase().contains("recusado") -> "Recusado ❌"
+                        statusMemoria.lowercase().contains("pendente") -> "Pendente ⏳"
+                        else -> statusMemoria
+                    }
+
                     Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                        Text(statusMemoria, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+                        Text(textoComEmoji, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
                     }
                 }
             }
@@ -133,16 +139,18 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = {
-                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Aceito ✅")
-                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Aceito ✅"
+                                    // 🚀 TEXTO PURO PRO SERVIDOR NÃO ENGASGAR
+                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Aceito")
+                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Aceito"
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), modifier = Modifier.weight(1f).height(36.dp), shape = RoundedCornerShape(8.dp)
                             ) { Text("Aceitar", fontSize = 12.sp, color = Color.White) }
 
                             Button(
                                 onClick = {
-                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Recusado ❌")
-                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Recusado ❌"
+                                    // 🚀 TEXTO PURO PRO SERVIDOR
+                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Recusado")
+                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Recusado"
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)), modifier = Modifier.weight(1f).height(36.dp), shape = RoundedCornerShape(8.dp)
                             ) { Text("Recusar", fontSize = 12.sp, color = Color.White) }
