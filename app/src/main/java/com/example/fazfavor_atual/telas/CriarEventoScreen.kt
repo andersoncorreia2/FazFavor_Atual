@@ -29,7 +29,7 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
     var horario by remember { mutableStateOf("") }
     var vagas by remember { mutableStateOf("") }
 
-    // ⏰ NOVA MÁSCARA VISUAL BLINDADA
+    // ⏰ MÁSCARA VISUAL DO HORÁRIO CORRIGIDA (Matemática exata do cursor)
     val mascaraHorario = VisualTransformation { text ->
         val num = text.text.take(4)
         var formatado = ""
@@ -39,8 +39,8 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
         }
         val mapeamento = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
-                if (offset <= 1) return offset
-                if (offset <= 4) return offset + 1
+                if (offset <= 2) return offset // 🛡️ CORREÇÃO: Mantém o cursor seguro nos 2 primeiros números
+                if (offset <= 4) return offset + 1 // Empurra o cursor 1 casa pra frente depois que o ":" aparece
                 return 5
             }
             override fun transformedToOriginal(offset: Int): Int {
@@ -73,19 +73,19 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // ⏰ CAMPO DE HORÁRIO ATUALIZADO COM A MÁSCARA
+            // ⏰ CAMPO DE HORÁRIO ATUALIZADO COM A MÁSCARA SEGURA
             OutlinedTextField(
                 value = horario,
                 onValueChange = { novoValor ->
                     val apenasNumeros = novoValor.filter { it.isDigit() }
                     if (apenasNumeros.length <= 4) {
-                        horario = apenasNumeros // Salva só os números, a máscara cuida dos ":"
+                        horario = apenasNumeros
                     }
                 },
                 label = { Text("Horário") },
                 modifier = Modifier.weight(1f),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                visualTransformation = mascaraHorario // Aplica a mágica aqui
+                visualTransformation = mascaraHorario
             )
 
             // 🔢 CAMPO DE VAGAS
@@ -105,7 +105,6 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
 
         Button(
             onClick = {
-                // Antes de publicar, formata o horário certinho (com os ":") se o usuário digitou os 4 números
                 val horarioFinal = if (horario.length == 4) "${horario.substring(0, 2)}:${horario.substring(2)}" else horario
                 aoPublicarEvento(nomeEvento, origem, destino, horarioFinal, vagas)
             },

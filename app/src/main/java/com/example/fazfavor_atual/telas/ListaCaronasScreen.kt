@@ -19,20 +19,14 @@ import com.example.fazfavor_atual.Carona
 import com.example.fazfavor_atual.ui.theme.*
 
 @Composable
-fun ListaCaronasScreen(
-    nomeLogado: String,
-    aoClicarEmSolicitar: (Carona) -> Unit,
-    aoClicarVoltar: () -> Unit,
-    aoClicarPerfil: () -> Unit
-) {
+fun ListaCaronasScreen(nomeLogado: String, aoClicarEmSolicitar: (Carona) -> Unit, aoClicarVoltar: () -> Unit, aoClicarPerfil: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().background(Color.White).padding(16.dp)) {
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Caronas Disponíveis", color = AzulPrincipal, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            OutlinedButton(
-                onClick = aoClicarVoltar, shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp), modifier = Modifier.height(36.dp)
-            ) { Text("🚪 Sair", color = VermelhoErro, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            OutlinedButton(onClick = aoClicarVoltar, shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp), modifier = Modifier.height(36.dp)) {
+                Text("🚪 Sair", color = VermelhoErro, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -42,10 +36,7 @@ fun ListaCaronasScreen(
                 Text("Nenhuma carona disponível no momento.", color = Color.Gray)
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
+            LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 16.dp)) {
                 items(BancoDeDados.caronas) { carona ->
                     CartaoCaronaDisponivel(carona, nomeLogado, aoClicarEmSolicitar)
                 }
@@ -53,70 +44,61 @@ fun ListaCaronasScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Button(
-            onClick = aoClicarPerfil, colors = ButtonDefaults.buttonColors(containerColor = AzulPrincipal),
-            modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(8.dp)
-        ) { Text("Ver Meu Perfil") }
+        Button(onClick = aoClicarPerfil, colors = ButtonDefaults.buttonColors(containerColor = AzulPrincipal), modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(8.dp)) {
+            Text("Ver Meu Perfil")
+        }
     }
 }
 
 @Composable
 fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicitar: (Carona) -> Unit) {
+    val pedidosDaCarona = BancoDeDados.todosOsPedidos.filter { it.caronaId == carona.id }
+    val meuPedido = pedidosDaCarona.find { it.passageiro == nomeLogado }
 
-    val passageiroDestaCarona = BancoDeDados.nomesPassageiros[carona.id]
-    val statusDaCarona = BancoDeDados.statusDasCaronas[carona.id]
+    val totalVagas = carona.vagas.toIntOrNull() ?: 0
+    val qtdAceitos = pedidosDaCarona.count { it.status.lowercase().contains("aceito") }
+    val vagasRestantes = totalVagas - qtdAceitos
 
     val partes = carona.origem.split(" - ", limit = 2)
     val eventoNome = if (partes.size > 1) partes[0] else "Evento"
     val origemReal = if (partes.size > 1) partes[1] else carona.origem
 
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(modifier = Modifier.weight(1f)) {
-
                 Text("Evento: $eventoNome", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AzulPrincipal)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Origem/Saída: $origemReal", fontSize = 14.sp, color = Color.DarkGray)
-                Text("Destino: ${carona.destino}", fontSize = 14.sp, color = Color.DarkGray)
+                Text("De: $origemReal", fontSize = 14.sp, color = Color.DarkGray)
+                Text("Para: ${carona.destino}", fontSize = 14.sp, color = Color.DarkGray)
                 Text("Motorista: ${carona.motorista}", fontSize = 14.sp, color = AzulPrincipal, fontWeight = FontWeight.Bold)
-
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Vagas: ${carona.vagas}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if(carona.vagas == "0") VermelhoErro else VerdeBotao)
+                Text("Vagas Livres: $vagasRestantes", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if(vagasRestantes <= 0) VermelhoErro else VerdeBotao)
             }
 
-            if (passageiroDestaCarona == nomeLogado && statusDaCarona != null) {
-
-                val statusLimpo = statusDaCarona.trim().lowercase()
-
+            if (meuPedido != null) {
+                val statusLimpo = meuPedido.status.trim().lowercase()
                 val corStatus = when {
                     statusLimpo.contains("aceito") -> VerdeBotao
                     statusLimpo.contains("recusado") -> VermelhoErro
-                    statusLimpo.contains("pendente") -> AmareloAviso
                     else -> AmareloAviso
                 }
-
-                // 🎨 MAGIA VISUAL: Embeleza com Emojis o texto recebido do servidor
                 val textoComEmoji = when {
                     statusLimpo.contains("aceito") -> "Aceito ✅"
                     statusLimpo.contains("recusado") -> "Recusado ❌"
-                    statusLimpo.contains("pendente") -> "Pendente ⏳"
-                    else -> statusDaCarona
+                    else -> "Pendente ⏳"
                 }
-
                 Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
                     Text(textoComEmoji, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
                 }
             } else {
-                if ((carona.vagas.toIntOrNull() ?: 0) > 0) {
-                    Button(
-                        onClick = { aoClicarEmSolicitar(carona) },
-                        colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), shape = RoundedCornerShape(8.dp)
-                    ) { Text("Solicitar", color = Color.White, fontWeight = FontWeight.Bold) }
+                if (vagasRestantes > 0) {
+                    Button(onClick = { BancoDeDados.fazerSolicitacao(carona, nomeLogado) }, colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), shape = RoundedCornerShape(8.dp)) {
+                        Text("Solicitar", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 } else {
-                    Text("Esgotado", color = Color.Gray, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Surface(color = Color.LightGray.copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp)) {
+                        Text("Esgotado", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                    }
                 }
             }
         }

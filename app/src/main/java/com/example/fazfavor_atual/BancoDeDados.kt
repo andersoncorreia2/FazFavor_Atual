@@ -1,7 +1,6 @@
 package com.example.fazfavor_atual
 
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import java.net.URL
 import kotlin.concurrent.thread
 import java.net.HttpURLConnection
@@ -11,18 +10,11 @@ import org.json.JSONObject
 
 data class Carona(val id: Int = 0, val origem: String, val destino: String, val horario: String, val vagas: String, val motorista: String)
 data class Usuario(val nome: String, val cpf: String, val email: String, val telefone: String, val veiculo: String = "", val placa: String = "", val senha: String = "")
-data class Solicitacao(val carona: Carona, val status: String)
+data class Pedido(val idReal: Int, val caronaId: Int, val passageiro: String, val status: String)
 
 object BancoDeDados {
     var caronas = mutableStateListOf<Carona>()
-
-    var nomesPassageiros = mutableStateMapOf<Int, String>()
-    var statusDasCaronas = mutableStateMapOf<Int, String>()
-    var meusPedidos = mutableStateMapOf<Int, String>()
-
-    // 🚨 O TRADUTOR SECRETO: Mapeia a Carona com a Solicitação real do servidor
-    var idsDasSolicitacoes = mutableStateMapOf<Int, Int>()
-
+    var todosOsPedidos = mutableStateListOf<Pedido>()
     var temEventoAtivo: Boolean = false
 
     fun buscarCaronasDoServidor() {
@@ -33,296 +25,106 @@ object BancoDeDados {
                 val jsonArray = JSONArray(resposta)
 
                 caronas.clear()
-
                 for (i in 0 until jsonArray.length()) {
                     val item = jsonArray.getJSONObject(i)
-                    val caronaDoCofre = Carona(
-                        id = item.getInt("id"),
-                        origem = item.getString("origem"),
-                        destino = item.getString("destino"),
-                        horario = item.getString("horario"),
-                        vagas = item.getString("vagas"),
-                        motorista = item.getString("motorista")
-                    )
-                    caronas.add(caronaDoCofre)
+                    caronas.add(Carona(
+                        id = item.getInt("id"), origem = item.getString("origem"),
+                        destino = item.getString("destino"), horario = item.getString("horario"),
+                        vagas = item.getString("vagas"), motorista = item.getString("motorista")
+                    ))
                 }
-            } catch (erro: Exception) {
-                println("❌ ERRO NA VIAGEM DE BUSCA NUVEM: ${erro.message}")
-            }
+            } catch (erro: Exception) { println("❌ ERRO CARONAS NUVEM: ${erro.message}") }
         }
     }
 
     fun enviarCaronaParaServidor(origem: String, destino: String, horario: String, vagas: String, motorista: String) {
         thread {
             try {
-                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/caronas")
-                val conexao = enderecoMagico.openConnection() as HttpURLConnection
+                val conexao = URL("https://fazfavor-backend.onrender.com/caronas").openConnection() as HttpURLConnection
                 conexao.requestMethod = "POST"
                 conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 conexao.doOutput = true
-
-                val pacoteJson = """
-                {
-                "origem": "$origem",
-                "destino": "$destino",
-                "horario": "$horario",
-                "vagas": "$vagas",
-                "motorista": "$motorista"
-                }
-                """.trimIndent()
-
+                val json = """{"origem": "$origem", "destino": "$destino", "horario": "$horario", "vagas": "$vagas", "motorista": "$motorista"}"""
                 val escritor = OutputStreamWriter(conexao.outputStream)
-                escritor.write(pacoteJson)
+                escritor.write(json)
                 escritor.flush()
-
-                // 🔥 O GATILHO
-                val codigoResposta = conexao.responseCode
-                println("📦 EVENTO CRIADO NA NUVEM! Servidor respondeu: $codigoResposta")
-
+                val code = conexao.responseCode
                 buscarCaronasDoServidor()
-            } catch (erro: Exception) {
-                println("❌ ERRO NA ENTREGA DA CARONA NUVEM: ${erro.message}")
-            }
+            } catch (erro: Exception) {}
         }
     }
 
-    fun enviarPedidoDeCarona(caronaId: Int, nomePassageiro: String) {
+    fun fazerSolicitacao(carona: Carona, nomePassageiro: String) {
+        todosOsPedidos.add(Pedido(idReal = 0, caronaId = carona.id, passageiro = nomePassageiro, status = "Pendente"))
         thread {
             try {
-                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/solicitacoes")
-                val conexao = enderecoMagico.openConnection() as HttpURLConnection
+                val conexao = URL("https://fazfavor-backend.onrender.com/solicitacoes").openConnection() as HttpURLConnection
                 conexao.requestMethod = "POST"
                 conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 conexao.doOutput = true
-
-                val pacoteJson = """
-                {
-                "carona_id": $caronaId,
-                "passageiro": "$nomePassageiro"
-                }
-                """.trimIndent()
-
+                val json = """{"carona_id": ${carona.id}, "passageiro": "$nomePassageiro"}"""
                 val escritor = OutputStreamWriter(conexao.outputStream)
-                escritor.write(pacoteJson)
+                escritor.write(json)
                 escritor.flush()
-
-                // 🔥 O GATILHO
-                val codigoResposta = conexao.responseCode
-                println("🙋‍♂️ PEDIDO ENVIADO! Servidor respondeu: $codigoResposta")
-
-                buscarCaronasDoServidor()
-            } catch (erro: Exception) {
-                println("❌ ERRO NO PEDIDO NUVEM: ${erro.message}")
-            }
+                val code = conexao.responseCode
+                buscarSolicitacoesDoServidor()
+            } catch (erro: Exception) {}
         }
     }
 
-    fun responderPedidoMotorista(caronaIdDaTela: Int, statusDecidido: String) {
-        // Pega o ID verdadeiro do pedido lá no tradutor secreto
-        val solicitacaoIdReal = idsDasSolicitacoes[caronaIdDaTela]
-
-        if (solicitacaoIdReal == null) {
-            println("❌ ERRO: O aplicativo não encontrou a ID real da solicitação no servidor!")
-            return
+    fun responderPedidoMotorista(pedidoIdReal: Int, statusDecidido: String) {
+        val index = todosOsPedidos.indexOfFirst { it.idReal == pedidoIdReal }
+        if (index != -1) {
+            val antigo = todosOsPedidos[index]
+            todosOsPedidos[index] = antigo.copy(status = statusDecidido)
         }
 
         thread {
             try {
-                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/solicitacoes/$solicitacaoIdReal")
-                val conexao = enderecoMagico.openConnection() as HttpURLConnection
+                val conexao = URL("https://fazfavor-backend.onrender.com/solicitacoes/$pedidoIdReal").openConnection() as HttpURLConnection
                 conexao.requestMethod = "PUT"
                 conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 conexao.doOutput = true
-
-                val pacoteJson = """
-                {
-                "status": "$statusDecidido"
-                }
-                """.trimIndent()
-
+                val json = """{"status": "$statusDecidido"}"""
                 val escritor = OutputStreamWriter(conexao.outputStream)
-                escritor.write(pacoteJson)
+                escritor.write(json)
                 escritor.flush()
-
-                // 🔥 O GATILHO
-                val codigoResposta = conexao.responseCode
-                println("🔄 STATUS ATUALIZADO NA NUVEM! Servidor respondeu: $codigoResposta")
-
-                buscarCaronasDoServidor()
-            } catch (erro: Exception) {
-                println("❌ ERRO AO RESPONDER NA NUVEM: ${erro.message}")
-            }
+                val code = conexao.responseCode
+                buscarSolicitacoesDoServidor()
+            } catch (erro: Exception) {}
         }
     }
 
     fun excluirCaronaDoServidor(caronaId: Int) {
         caronas.removeAll { it.id == caronaId }
+        todosOsPedidos.removeAll { it.caronaId == caronaId }
         temEventoAtivo = false
-
         thread {
             try {
-                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/caronas/$caronaId")
-                val conexao = enderecoMagico.openConnection() as HttpURLConnection
+                val conexao = URL("https://fazfavor-backend.onrender.com/caronas/$caronaId").openConnection() as HttpURLConnection
                 conexao.requestMethod = "DELETE"
-
-                // 🔥 O GATILHO
-                val codigoResposta = conexao.responseCode
-                println("🗑️ Evento excluído! Servidor respondeu: $codigoResposta")
-
+                val code = conexao.responseCode
                 buscarCaronasDoServidor()
-            } catch (erro: Exception) {
-                println("❌ ERRO AO AVISAR O SERVIDOR NUVEM: ${erro.message}")
-            }
+            } catch (erro: Exception) {}
         }
     }
-
-    fun fazerSolicitacao(carona: Carona, nomePassageiro: String) {
-        statusDasCaronas[carona.id] = "Pendente"
-        nomesPassageiros[carona.id] = nomePassageiro
-        meusPedidos[carona.id] = "Pendente"
-        enviarPedidoDeCarona(carona.id, nomePassageiro)
-    }
-
-    // ==========================================
-    // 🌐 FUNÇÕES DE AUTENTICAÇÃO NA NUVEM
-    // ==========================================
-
-    fun fazerLoginNuvem(emailRecebido: String, senhaRecebida: String, aoTerminar: (Usuario?, String) -> Unit) {
-        thread {
-            try {
-                val url = URL("https://fazfavor-backend.onrender.com/login")
-                val conexao = url.openConnection() as HttpURLConnection
-                conexao.requestMethod = "POST"
-                conexao.connectTimeout = 15000
-                conexao.readTimeout = 60000
-                conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-                val json = """{"email": "$emailRecebido", "senha": "$senhaRecebida"}"""
-                val escritor = OutputStreamWriter(conexao.outputStream)
-                escritor.write(json)
-                escritor.flush()
-
-                if (conexao.responseCode == 200) {
-                    val resposta = conexao.inputStream.bufferedReader().readText()
-                    val jsonResponse = JSONObject(resposta)
-                    val usuario = Usuario(
-                        nome = jsonResponse.getString("nome"),
-                        cpf = jsonResponse.getString("cpf"),
-                        email = jsonResponse.getString("email"),
-                        telefone = jsonResponse.getString("telefone"),
-                        veiculo = jsonResponse.optString("veiculo", ""),
-                        placa = jsonResponse.optString("placa", ""),
-                        senha = senhaRecebida
-                    )
-                    aoTerminar(usuario, "")
-                } else {
-                    aoTerminar(null, "Acesso Negado: E-mail ou senha incorretos.")
-                }
-            } catch (erro: Exception) {
-                aoTerminar(null, "Falha de conexão: Verifique sua internet ou o servidor.")
-            }
-        }
-    }
-
-    fun cadastrarUsuarioNuvem(nome: String, cpf: String, telefone: String, email: String, senha: String, veiculo: String, placa: String, vagas: String, aoTerminar: (Boolean, String) -> Unit) {
-        thread {
-            try {
-                val url = URL("https://fazfavor-backend.onrender.com/usuarios")
-                val conexao = url.openConnection() as HttpURLConnection
-                conexao.requestMethod = "POST"
-                conexao.connectTimeout = 15000
-                conexao.readTimeout = 60000
-                conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-
-                val json = """
-                {
-                    "nome": "$nome",
-                    "cpf": "$cpf",
-                    "telefone": "$telefone",
-                    "email": "$email",
-                    "senha": "$senha",
-                    "veiculo": "$veiculo",
-                    "placa": "$placa"
-                }
-                """.trimIndent()
-
-                val escritor = OutputStreamWriter(conexao.outputStream)
-                escritor.write(json)
-                escritor.flush()
-
-                when (conexao.responseCode) {
-                    201 -> aoTerminar(true, "")
-                    400 -> aoTerminar(false, "Este CPF ou E-mail já possui cadastro!")
-                    else -> aoTerminar(false, "Erro desconhecido ao cadastrar.")
-                }
-            } catch (erro: Exception) {
-                aoTerminar(false, "Falha de conexão com o servidor.")
-            }
-        }
-    }
-
-    fun verificarCpfExistente(cpfParaChecar: String, aoDescobrir: (Boolean) -> Unit) {
-        thread {
-            try {
-                val url = URL("https://fazfavor-backend.onrender.com/verificar_cpf/$cpfParaChecar")
-                val conexao = url.openConnection() as HttpURLConnection
-                conexao.requestMethod = "GET"
-
-                if (conexao.responseCode == 200) {
-                    val resposta = conexao.inputStream.bufferedReader().readText()
-                    val jsonResponse = JSONObject(resposta)
-                    val cpfJaExiste = jsonResponse.getBoolean("existe")
-                    aoDescobrir(cpfJaExiste)
-                }
-            } catch (erro: Exception) {
-                println("❌ Erro ao checar CPF na nuvem: ${erro.message}")
-            }
-        }
-    }
-
-    // 🗑️ GATILHO OFICIAL PARA EXCLUIR CONTA NA NUVEM
-    fun excluirUsuario(emailParaExcluir: String) {
-        thread {
-            try {
-                val url = URL("https://fazfavor-backend.onrender.com/usuarios/$emailParaExcluir")
-                val conexao = url.openConnection() as HttpURLConnection
-                conexao.requestMethod = "DELETE"
-
-                val codigoResposta = conexao.responseCode
-                println("🗑️ Conta excluída! Servidor respondeu: $codigoResposta")
-            } catch (erro: Exception) {
-                println("❌ ERRO AO EXCLUIR CONTA NUVEM: ${erro.message}")
-            }
-        }
-    }
-
-    // ==========================================
-    // 📡 O RADAR (Sincronização em Tempo Real)
-    // ==========================================
 
     fun buscarSolicitacoesDoServidor() {
         try {
-            val enderecoMagico = "https://fazfavor-backend.onrender.com/solicitacoes"
-            val resposta = URL(enderecoMagico).readText()
+            val resposta = URL("https://fazfavor-backend.onrender.com/solicitacoes").readText()
             val jsonArray = JSONArray(resposta)
 
+            val novaLista = mutableListOf<Pedido>()
             for (i in 0 until jsonArray.length()) {
                 val item = jsonArray.getJSONObject(i)
-                val idSolicitacao = item.getInt("id")
-                val caronaId = item.getInt("carona_id")
-                val passageiro = item.getString("passageiro")
-                val status = item.getString("status")
-
-                nomesPassageiros[caronaId] = passageiro
-                statusDasCaronas[caronaId] = status
-                meusPedidos[caronaId] = status
-
-                // 🕵️ SALVA O ID REAL DA SOLICITAÇÃO ESCONDIDO NO TRADUTOR
-                idsDasSolicitacoes[caronaId] = idSolicitacao
+                novaLista.add(Pedido(
+                    idReal = item.getInt("id"), caronaId = item.getInt("carona_id"),
+                    passageiro = item.getString("passageiro"), status = item.getString("status")
+                ))
             }
-        } catch (erro: Exception) {
-            println("❌ O Radar falhou em buscar solicitações: ${erro.message}")
-        }
+            todosOsPedidos.clear()
+            todosOsPedidos.addAll(novaLista)
+        } catch (erro: Exception) { println("❌ Radar falhou: ${erro.message}") }
     }
 
     fun ligarRadar() {
@@ -331,6 +133,77 @@ object BancoDeDados {
                 buscarCaronasDoServidor()
                 buscarSolicitacoesDoServidor()
                 Thread.sleep(5000)
+            }
+        }
+    }
+
+    fun fazerLoginNuvem(emailRecebido: String, senhaRecebida: String, aoTerminar: (Usuario?, String) -> Unit) {
+        thread {
+            try {
+                val conexao = URL("https://fazfavor-backend.onrender.com/login").openConnection() as HttpURLConnection
+                conexao.requestMethod = "POST"
+                conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                val json = """{"email": "$emailRecebido", "senha": "$senhaRecebida"}"""
+                val escritor = OutputStreamWriter(conexao.outputStream)
+                escritor.write(json)
+                escritor.flush()
+
+                if (conexao.responseCode == 200) {
+                    val res = JSONObject(conexao.inputStream.bufferedReader().readText())
+                    aoTerminar(Usuario(res.getString("nome"), res.getString("cpf"), res.getString("email"), res.getString("telefone"), res.optString("veiculo", ""), res.optString("placa", ""), senhaRecebida), "")
+                } else { aoTerminar(null, "Negado") }
+            } catch (erro: Exception) { aoTerminar(null, "Erro") }
+        }
+    }
+
+    fun cadastrarUsuarioNuvem(nome: String, cpf: String, telefone: String, email: String, senha: String, veiculo: String, placa: String, vagas: String, aoTerminar: (Boolean, String) -> Unit) {
+        thread {
+            try {
+                val conexao = URL("https://fazfavor-backend.onrender.com/usuarios").openConnection() as HttpURLConnection
+                conexao.requestMethod = "POST"
+                conexao.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                val json = """{"nome": "$nome", "cpf": "$cpf", "telefone": "$telefone", "email": "$email", "senha": "$senha", "veiculo": "$veiculo", "placa": "$placa"}"""
+                val escritor = OutputStreamWriter(conexao.outputStream)
+                escritor.write(json)
+                escritor.flush()
+                when (conexao.responseCode) {
+                    201 -> aoTerminar(true, "")
+                    400 -> aoTerminar(false, "Já existe")
+                    else -> aoTerminar(false, "Erro")
+                }
+            } catch (erro: Exception) { aoTerminar(false, "Falha") }
+        }
+    }
+
+    fun verificarCpfExistente(cpf: String, aoDescobrir: (Boolean) -> Unit) {
+        thread {
+            try {
+                val conexao = URL("https://fazfavor-backend.onrender.com/verificar_cpf/$cpf").openConnection() as HttpURLConnection
+                conexao.requestMethod = "GET"
+                if (conexao.responseCode == 200) {
+                    val res = JSONObject(conexao.inputStream.bufferedReader().readText())
+                    aoDescobrir(res.getBoolean("existe"))
+                }
+            } catch (erro: Exception) {}
+        }
+    }
+
+    fun excluirUsuario(email: String) {
+        thread {
+            try {
+                // 🛡️ TRADUTOR: Transforma o "@" e o "." em código seguro para a internet
+                val emailSeguroParaInternet = java.net.URLEncoder.encode(email, "UTF-8")
+
+                val enderecoMagico = URL("https://fazfavor-backend.onrender.com/usuarios/$emailSeguroParaInternet")
+                val conexao = enderecoMagico.openConnection() as HttpURLConnection
+                conexao.requestMethod = "DELETE"
+
+                // 🔥 O GATILHO
+                val codigoResposta = conexao.responseCode
+                println("🗑️ ORDEM DE EXCLUSÃO ENVIADA! Servidor respondeu: $codigoResposta")
+
+            } catch (erro: Exception) {
+                println("❌ ERRO AO EXCLUIR CONTA NUVEM: ${erro.message}")
             }
         }
     }
