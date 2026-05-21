@@ -20,7 +20,7 @@ import com.example.fazfavor_atual.ui.theme.*
 
 @Composable
 fun ListaCaronasScreen(
-    nomeLogado: String, // ⬅️ AGORA A TELA SABE QUEM É A PESSOA!
+    nomeLogado: String,
     aoClicarEmSolicitar: (Carona) -> Unit,
     aoClicarVoltar: () -> Unit,
     aoClicarPerfil: () -> Unit
@@ -44,7 +44,7 @@ fun ListaCaronasScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 16.dp) // 🌬️ MÁGICA: Dá um "respiro" para o último cartão não esmagar no botão!
+                contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(BancoDeDados.caronas) { carona ->
                     CartaoCaronaDisponivel(carona, nomeLogado, aoClicarEmSolicitar)
@@ -63,11 +63,9 @@ fun ListaCaronasScreen(
 @Composable
 fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicitar: (Carona) -> Unit) {
 
-    // 🧠 VERIFICA DE QUEM É O PEDIDO
     val passageiroDestaCarona = BancoDeDados.nomesPassageiros[carona.id]
     val statusDaCarona = BancoDeDados.statusDasCaronas[carona.id]
 
-    // ✂️ CORTA O TEXTO DA ORIGEM
     val partes = carona.origem.split(" - ", limit = 2)
     val eventoNome = if (partes.size > 1) partes[0] else "Evento"
     val origemReal = if (partes.size > 1) partes[1] else carona.origem
@@ -79,7 +77,6 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(modifier = Modifier.weight(1f)) {
 
-                // 🎨 NOVO LAYOUT DO CARTÃO!
                 Text("Evento: $eventoNome", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = AzulPrincipal)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Origem/Saída: $origemReal", fontSize = 14.sp, color = Color.DarkGray)
@@ -90,15 +87,22 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
                 Text("Vagas: ${carona.vagas}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if(carona.vagas == "0") VermelhoErro else VerdeBotao)
             }
 
-            // 🛡️ SÓ MOSTRA O STATUS SE FOI A PRÓPRIA PESSOA QUE PEDIU!
             if (passageiroDestaCarona == nomeLogado && statusDaCarona != null) {
-                val corStatus = when (statusDaCarona) {
-                    "Aceito ✅" -> VerdeBotao
-                    "Recusado ❌" -> Color(0xFFD32F2F)
+
+                val statusLimpo = statusDaCarona.trim().lowercase()
+
+                // 🛡️ BLINDAGEM SUPREMA: Procura a palavra no meio do texto, ignorando emojis!
+                val corStatus = when {
+                    statusLimpo.contains("aceito") -> VerdeBotao
+                    statusLimpo.contains("recusado") -> VermelhoErro
+                    statusLimpo.contains("pendente") -> AmareloAviso
                     else -> AmareloAviso
                 }
+
+                val textoParaExibir = statusDaCarona.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+
                 Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                    Text(statusDaCarona, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                    Text(textoParaExibir, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
                 }
             } else {
                 if ((carona.vagas.toIntOrNull() ?: 0) > 0) {

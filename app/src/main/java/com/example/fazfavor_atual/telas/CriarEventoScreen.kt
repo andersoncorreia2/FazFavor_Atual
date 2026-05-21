@@ -11,42 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fazfavor_atual.ui.theme.*
-
-// --- MÁSCARA DE RELÓGIO (00:00) ---
-class MascaraHorario : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        val limpo = text.text.take(4)
-        var formatado = ""
-
-        for (i in limpo.indices) {
-            formatado += limpo[i]
-            if (i == 1 && limpo.length > 2) formatado += ":"
-        }
-
-        val mapeamento = object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int {
-                if (offset <= 1) return offset
-                if (offset <= 4) return offset + 1
-                return 5
-            }
-            override fun transformedToOriginal(offset: Int): Int {
-                if (offset <= 2) return offset
-                if (offset <= 5) return offset - 1
-                return 4
-            }
-        }
-        return TransformedText(AnnotatedString(formatado), mapeamento)
-    }
-}
 
 @Composable
 fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String) -> Unit, aoClicarSair: () -> Unit) {
@@ -77,22 +46,25 @@ fun CriarEventoScreen(aoPublicarEvento: (String, String, String, String, String)
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // ⏰ CAMPO DE HORÁRIO ATUALIZADO (Apenas números + Máscara)
+            // ⏰ CAMPO DE HORÁRIO BLINDADO (Não trava mais)
             OutlinedTextField(
                 value = horario,
                 onValueChange = { novoValor ->
                     val apenasNumeros = novoValor.filter { it.isDigit() }
                     if (apenasNumeros.length <= 4) {
-                        horario = apenasNumeros
+                        horario = if (apenasNumeros.length >= 3) {
+                            "${apenasNumeros.substring(0, 2)}:${apenasNumeros.substring(2)}"
+                        } else {
+                            apenasNumeros
+                        }
                     }
                 },
                 label = { Text("Horário") },
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                visualTransformation = MascaraHorario()
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
-            // 🔢 CAMPO DE VAGAS ATUALIZADO (Apenas números)
+            // 🔢 CAMPO DE VAGAS (Apenas números)
             OutlinedTextField(
                 value = vagas,
                 onValueChange = { novoValor ->

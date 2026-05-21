@@ -57,17 +57,21 @@ fun MinhasSolicitacoesScreen(
                     val nomeDoPassageiro = BancoDeDados.nomesPassageiros[carona.id]
                     val statusAtual = BancoDeDados.statusDasCaronas[carona.id] ?: if (nomeDoPassageiro != null) "Pendente" else "Livre"
 
-                    val cor = when(statusAtual) {
-                        "Aceito" -> VerdeBotao
-                        "Recusado" -> Color(0xFFD32F2F)
-                        "Pendente" -> AmareloAviso
+                    val statusFormatado = statusAtual.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+                    val statusLimpo = statusAtual.trim().lowercase()
+
+                    // 🛡️ BLINDAGEM SUPREMA AQUI TAMBÉM
+                    val cor = when {
+                        statusLimpo.contains("aceito") -> VerdeBotao
+                        statusLimpo.contains("recusado") -> Color(0xFFD32F2F)
+                        statusLimpo.contains("pendente") -> AmareloAviso
                         else -> Color.Transparent
                     }
 
                     CartaoStatus(
                         idSolicitacao = carona.id, origemCrua = carona.origem, destino = carona.destino,
                         passageiro = nomeDoPassageiro, vagas = carona.vagas,
-                        statusMemoria = statusAtual, corStatus = cor, isMotorista = isMotorista
+                        statusMemoria = statusFormatado, corStatus = cor, isMotorista = isMotorista
                     )
                 }
             }
@@ -111,8 +115,8 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
                 }
 
                 if (statusMemoria != "Livre" && statusMemoria != "Transparente") {
-                    // Garantir visibilidade das cores
-                    val textColor = if (statusMemoria == "Pendente") Color.Black else corStatus
+
+                    val textColor = if (statusMemoria.lowercase().contains("pendente")) Color.Black else corStatus
 
                     Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
                         Text(statusMemoria, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
@@ -125,20 +129,20 @@ fun CartaoStatus(idSolicitacao: Int, origemCrua: String, destino: String, passag
             if (isMotorista) {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
-                    if (statusMemoria == "Pendente" && passageiro != null) {
+                    if (statusMemoria.lowercase().contains("pendente") && passageiro != null) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = {
-                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Aceito")
-                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Aceito"
+                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Aceito ✅")
+                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Aceito ✅"
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), modifier = Modifier.weight(1f).height(36.dp), shape = RoundedCornerShape(8.dp)
                             ) { Text("Aceitar", fontSize = 12.sp, color = Color.White) }
 
                             Button(
                                 onClick = {
-                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Recusado")
-                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Recusado"
+                                    BancoDeDados.responderPedidoMotorista(idSolicitacao, "Recusado ❌")
+                                    BancoDeDados.statusDasCaronas[idSolicitacao] = "Recusado ❌"
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)), modifier = Modifier.weight(1f).height(36.dp), shape = RoundedCornerShape(8.dp)
                             ) { Text("Recusar", fontSize = 12.sp, color = Color.White) }

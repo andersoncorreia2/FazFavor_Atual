@@ -25,12 +25,8 @@ import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fazfavor_atual.BancoDeDados
 import com.example.fazfavor_atual.ui.theme.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import com.example.fazfavor_atual.ui.theme.AzulPrincipal
-import com.example.fazfavor_atual.ui.theme.VerdeBotao
-import com.example.fazfavor_atual.ui.theme.VermelhoErro
 
 // --- MÁSCARAS ---
 class CpfVisualTransformation : VisualTransformation {
@@ -107,6 +103,9 @@ fun CadastroScreen(
     var ofertarCarona by remember { mutableStateOf(false) }
     var senhaVisivel by remember { mutableStateOf(false) }
 
+    // 🕵️ Variável do Espião de CPF!
+    var cpfJaExiste by remember { mutableStateOf(false) }
+
     val focusManager = LocalFocusManager.current
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
@@ -126,8 +125,32 @@ fun CadastroScreen(
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
         )
 
+        // 🚨 CAMPO DE CPF BLINDADO COM O ESPIÃO
         OutlinedTextField(
-            value = cpf, onValueChange = { cpf = it.filter { char -> char.isDigit() }.take(11) }, label = { Text("CPF") }, modifier = Modifier.fillMaxWidth(),
+            value = cpf,
+            onValueChange = { novoTexto ->
+                val soNumeros = novoTexto.filter { it.isDigit() }.take(11)
+                cpf = soNumeros
+
+                // Se o usuário apagar números, tira a luz vermelha
+                if (soNumeros.length < 11) {
+                    cpfJaExiste = false
+                }
+                // Se bateu 11 números, aciona o espião na hora!
+                else if (soNumeros.length == 11) {
+                    BancoDeDados.verificarCpfExistente(soNumeros) { existe ->
+                        cpfJaExiste = existe // Se existir, a caixa fica vermelha imediatamente
+                    }
+                }
+            },
+            label = { Text("CPF") },
+            modifier = Modifier.fillMaxWidth(),
+            isError = cpfJaExiste, // <-- Isso aqui faz a borda ficar vermelha!
+            supportingText = {
+                if (cpfJaExiste) {
+                    Text("⚠️ Este CPF já está cadastrado no sistema!", color = VermelhoErro, fontWeight = FontWeight.Bold)
+                }
+            },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             visualTransformation = CpfVisualTransformation()
@@ -180,10 +203,15 @@ fun CadastroScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { aoConcluirCadastro(nome, cpf, telefone, email, senha, veiculo, placa, vagas) }, colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), modifier = Modifier.fillMaxWidth().height(48.dp)) {
+            Button(
+                // Trava o botão se o CPF já existir!
+                onClick = { if (!cpfJaExiste) aoConcluirCadastro(nome, cpf, telefone, email, senha, veiculo, placa, vagas) },
+                colors = ButtonDefaults.buttonColors(containerColor = if (cpfJaExiste) Color.Gray else VerdeBotao),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
                 Text("Concluir cadastro")
             }
-            OutlinedButton(onClick = { nome = ""; cpf = ""; telefone = ""; email = ""; senha = ""; veiculo = ""; placa = ""; vagas = ""; ofertarCarona = false }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+            OutlinedButton(onClick = { nome = ""; cpf = ""; telefone = ""; email = ""; senha = ""; veiculo = ""; placa = ""; vagas = ""; ofertarCarona = false; cpfJaExiste = false }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                 Text("Limpar Todos os Campos", color = Color.Gray)
             }
             TextButton(onClick = aoClicarFechar, modifier = Modifier.fillMaxWidth().height(48.dp)) {
