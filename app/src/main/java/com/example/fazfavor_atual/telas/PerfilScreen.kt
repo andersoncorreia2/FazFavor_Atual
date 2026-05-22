@@ -102,3 +102,4 @@ fun CaixaInfo(titulo: String, subtitulo: String) {
         }
     }
 }
+

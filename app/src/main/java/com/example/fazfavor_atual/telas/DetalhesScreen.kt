@@ -103,3 +103,4 @@ fun DetalhesScreen(caronaInfo: Carona?, aoConfirmarCarona: () -> Unit, aoClicarV
         }
     }
 }
+

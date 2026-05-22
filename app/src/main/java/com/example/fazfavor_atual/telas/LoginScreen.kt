@@ -99,7 +99,21 @@ fun LoginScreen(
             Text("Entrar")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 🆕 INÍCIO DA ALTERAÇÃO: Adição dos textos informativos
+        Text(
+            text = "Não possui conta? Crie a sua abaixo.",
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+        Text(
+            text = "Sua conta é permanente até que você decida excluí-la.",
+            fontSize = 12.sp,
+            color = AzulPrincipal,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        // 🆕 FIM DA ALTERAÇÃO
 
         // BOTÃO CRIAR CONTA
         OutlinedButton(

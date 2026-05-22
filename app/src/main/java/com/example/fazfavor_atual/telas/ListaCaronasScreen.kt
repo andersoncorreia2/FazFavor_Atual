@@ -92,9 +92,11 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
                 }
             } else {
                 if (vagasRestantes > 0) {
-                    Button(onClick = { BancoDeDados.fazerSolicitacao(carona, nomeLogado) }, colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), shape = RoundedCornerShape(8.dp)) {
+                    // 🆕 INÍCIO DA ALTERAÇÃO: O botão agora chama 'aoClicarEmSolicitar' para abrir a tela de Detalhes
+                    Button(onClick = { aoClicarEmSolicitar(carona) }, colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), shape = RoundedCornerShape(8.dp)) {
                         Text("Solicitar", color = Color.White, fontWeight = FontWeight.Bold)
                     }
+                    // 🆕 FIM DA ALTERAÇÃO
                 } else {
                     Surface(color = Color.LightGray.copy(alpha = 0.3f), shape = RoundedCornerShape(8.dp)) {
                         Text("Esgotado", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
