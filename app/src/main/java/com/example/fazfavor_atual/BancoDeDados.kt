@@ -23,17 +23,37 @@ object BancoDeDados {
                 val enderecoMagico = "https://fazfavor-backend.onrender.com/caronas"
                 val resposta = URL(enderecoMagico).readText()
                 val jsonArray = JSONArray(resposta)
+                //caronas.clear()
+                //for (i in 0 until jsonArray.length()) {
+                    //val item = jsonArray.getJSONObject(i)
+                    //caronas.add(Carona(
+                        //id = item.getInt("id"), origem = item.getString("origem"),
+                        //destino = item.getString("destino"), horario = item.getString("horario"),
+                        //vagas = item.getString("vagas"), motorista = item.getString("motorista")
+                    //))
+                //}
+                // 1. Cria uma lista temporária para não interferir na interface enquanto lê
+                val novaLista = mutableListOf<Carona>()
 
-                caronas.clear()
                 for (i in 0 until jsonArray.length()) {
                     val item = jsonArray.getJSONObject(i)
-                    caronas.add(Carona(
-                        id = item.getInt("id"), origem = item.getString("origem"),
-                        destino = item.getString("destino"), horario = item.getString("horario"),
-                        vagas = item.getString("vagas"), motorista = item.getString("motorista")
+                    novaLista.add(Carona(
+                        id = item.getInt("id"),
+                        origem = item.getString("origem"),
+                        destino = item.getString("destino"),
+                        horario = item.getString("horario"),
+                        vagas = item.getString("vagas"),
+                        motorista = item.getString("motorista")
                     ))
                 }
-            } catch (erro: Exception) { println("❌ ERRO CARONAS NUVEM: ${erro.message}") }
+
+                // 2. Atualiza a lista do Compose de uma só vez (Operação atômica)
+                caronas.clear()
+                caronas.addAll(novaLista)
+
+            } catch (erro: Exception) {
+                println("❌ ERRO CARONAS NUVEM: ${erro.message}")
+            }
         }
     }
 
@@ -69,6 +89,32 @@ object BancoDeDados {
                 val code = conexao.responseCode
                 buscarSolicitacoesDoServidor()
             } catch (erro: Exception) {}
+        }
+    }
+
+    // Inserido novo código
+    fun cancelarPedidoPassageiro(pedidoIdReal: Int) {
+        // 1. Remove da tela imediatamente para o usuário não ter que esperar
+        val index = todosOsPedidos.indexOfFirst { it.idReal == pedidoIdReal }
+        if (index != -1) {
+            todosOsPedidos.removeAt(index)
+        }
+
+        // 2. Avisa o servidor para apagar definitivamente
+        thread {
+            try {
+                val conexao = URL("https://fazfavor-backend.onrender.com/solicitacoes/$pedidoIdReal").openConnection() as HttpURLConnection
+                conexao.requestMethod = "DELETE"
+
+                val code = conexao.responseCode
+                println("🗑️ Pedido cancelado pelo passageiro! Servidor respondeu: $code")
+
+                // Atualiza tudo para garantir que as vagas sincronizem
+                buscarSolicitacoesDoServidor()
+                buscarCaronasDoServidor()
+            } catch (erro: Exception) {
+                println("❌ Erro ao cancelar pedido: ${erro.message}")
+            }
         }
     }
 

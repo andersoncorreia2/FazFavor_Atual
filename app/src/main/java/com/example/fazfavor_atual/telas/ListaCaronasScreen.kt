@@ -55,9 +55,18 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
     val pedidosDaCarona = BancoDeDados.todosOsPedidos.filter { it.caronaId == carona.id }
     val meuPedido = pedidosDaCarona.find { it.passageiro == nomeLogado }
 
+    // ✅ CÓDIGO NOVO
     val totalVagas = carona.vagas.toIntOrNull() ?: 0
-    val qtdAceitos = pedidosDaCarona.count { it.status.lowercase().contains("aceito") }
-    val vagasRestantes = totalVagas - qtdAceitos
+    val qtdOcupadas = pedidosDaCarona.count {
+        val status = it.status.lowercase()
+        status.contains("aceito") || status.contains("pendente")
+    }
+    val vagasRestantes = totalVagas - qtdOcupadas
+
+    // Código antigo
+    //val totalVagas = carona.vagas.toIntOrNull() ?: 0
+    //val qtdAceitos = pedidosDaCarona.count { it.status.lowercase().contains("aceito") }
+    //val vagasRestantes = totalVagas - qtdAceitos
 
     val partes = carona.origem.split(" - ", limit = 2)
     val eventoNome = if (partes.size > 1) partes[0] else "Evento"
@@ -75,6 +84,7 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
                 Text("Vagas Livres: $vagasRestantes", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if(vagasRestantes <= 0) VermelhoErro else VerdeBotao)
             }
 
+            // Código novo
             if (meuPedido != null) {
                 val statusLimpo = meuPedido.status.trim().lowercase()
                 val corStatus = when {
@@ -87,10 +97,46 @@ fun CartaoCaronaDisponivel(carona: Carona, nomeLogado: String, aoClicarEmSolicit
                     statusLimpo.contains("recusado") -> "Recusado ❌"
                     else -> "Pendente ⏳"
                 }
-                Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                    Text(textoComEmoji, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+
+                // Colocamos o Status e o Botão na mesma linha
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                    Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
+                        Text(textoComEmoji, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                    }
+
+                    // 🔥 REGRA: O botão "Cancelar" SÓ APARECE se estiver Pendente!
+                    if (statusLimpo.contains("pendente")) {
+                        OutlinedButton(
+                            onClick = { BancoDeDados.cancelarPedidoPassageiro(meuPedido.idReal) },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("Cancelar", color = VermelhoErro, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             } else {
+                // ... (O restante do código que exibe o botão verde "Solicitar" continua igualzinho aqui embaixo)
+            // Código antigo
+            //if (meuPedido != null) {
+                //val statusLimpo = meuPedido.status.trim().lowercase()
+                //val corStatus = when {
+                    //statusLimpo.contains("aceito") -> VerdeBotao
+                    //statusLimpo.contains("recusado") -> VermelhoErro
+                    //else -> AmareloAviso
+                //}
+                //val textoComEmoji = when {
+                    //statusLimpo.contains("aceito") -> "Aceito ✅"
+                    //statusLimpo.contains("recusado") -> "Recusado ❌"
+                    //else -> "Pendente ⏳"
+                //}
+                //Surface(color = corStatus.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
+                    //Text(textoComEmoji, color = corStatus, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+                //}
+            //} else {
+
                 if (vagasRestantes > 0) {
                     // 🆕 INÍCIO DA ALTERAÇÃO: O botão agora chama 'aoClicarEmSolicitar' para abrir a tela de Detalhes
                     Button(onClick = { aoClicarEmSolicitar(carona) }, colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao), shape = RoundedCornerShape(8.dp)) {

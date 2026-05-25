@@ -66,9 +66,18 @@ fun MinhasSolicitacoesScreen(
 fun CartaoEventoMotorista(carona: Carona) {
     val pedidosDaCarona = BancoDeDados.todosOsPedidos.filter { it.caronaId == carona.id }
 
+    // ✅ CÓDIGO NOVO
     val totalVagas = carona.vagas.toIntOrNull() ?: 0
-    val qtdAceitos = pedidosDaCarona.count { it.status.lowercase().contains("aceito") }
-    val vagasRestantes = totalVagas - qtdAceitos
+    val qtdOcupadas = pedidosDaCarona.count {
+        val status = it.status.lowercase()
+        status.contains("aceito") || status.contains("pendente")
+    }
+    val vagasRestantes = totalVagas - qtdOcupadas
+
+    // Código antigo
+    //val totalVagas = carona.vagas.toIntOrNull() ?: 0
+    //val qtdAceitos = pedidosDaCarona.count { it.status.lowercase().contains("aceito") }
+    //val vagasRestantes = totalVagas - qtdAceitos
 
     val partes = carona.origem.split(" - ", limit = 2)
     val eventoNome = if (partes.size > 1) partes[0] else "Evento"

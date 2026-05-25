@@ -1,5 +1,6 @@
 package com.example.fazfavor_atual.telas
 
+import com.example.fazfavor_atual.BancoDeDados//novo código
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,16 @@ fun DetalhesScreen(caronaInfo: Carona?, aoConfirmarCarona: () -> Unit, aoClicarV
         Spacer(modifier = Modifier.height(24.dp))
 
         if (caronaInfo != null) {
+            // 🆕 INÍCIO DO CÁLCULO DE VAGAS EM TEMPO REAL
+            val pedidosDaCarona = BancoDeDados.todosOsPedidos.filter { it.caronaId == caronaInfo.id }
+            val totalVagas = caronaInfo.vagas.toIntOrNull() ?: 0
+            val qtdOcupadas = pedidosDaCarona.count {
+                val status = it.status.lowercase()
+                status.contains("aceito") || status.contains("pendente")
+            }
+            val vagasRestantes = totalVagas - qtdOcupadas
+            // 🆕 FIM DO CÁLCULO DE VAGAS EM TEMPO REAL
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.LocationOn, contentDescription = null, tint = AzulPrincipal)
                 Spacer(modifier = Modifier.width(16.dp))
@@ -61,14 +72,25 @@ fun DetalhesScreen(caronaInfo: Carona?, aoConfirmarCarona: () -> Unit, aoClicarV
             }
             Spacer(modifier = Modifier.height(16.dp))
 
+            //Texto novo
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("Vagas disponíveis", fontSize = 12.sp, color = Color.Gray)
-                    Text("${caronaInfo.vagas} vagas", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    // 🚨 TROQUE A VARIÁVEL AQUI PARA EXIBIR O CÁLCULO:
+                    Text("$vagasRestantes vagas", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            //Texto antigo
+            //Row(verticalAlignment = Alignment.CenterVertically) {
+                //Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                //Spacer(modifier = Modifier.width(16.dp))
+                //Column {
+                    //Text("Vagas disponíveis", fontSize = 12.sp, color = Color.Gray)
+                    //Text("${caronaInfo.vagas} vagas", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                //}
+            //}
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -99,7 +121,7 @@ fun DetalhesScreen(caronaInfo: Carona?, aoConfirmarCarona: () -> Unit, aoClicarV
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = VerdeBotao)
         ) {
-            Text("Solicitar Carona", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("Confirmar Carona", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
